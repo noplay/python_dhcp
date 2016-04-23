@@ -54,7 +54,7 @@ if __name__ == '__main__':
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     # 广播
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, -1)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     try:
         s.bind(('', 6800))
     except Exception as e:
@@ -65,6 +65,15 @@ if __name__ == '__main__':
     discoverPacket = DHCPDiscover()
     s.sendto(discoverPacket.buildPacket(), ('<broadcast>', 67))
 
-    # s.settimeout(3)
-    data = s.recv(1024)
-    print(data)
+    # receiving DHCPOffer packet
+    s.settimeout(2)
+    while 1:
+        data = s.recvfrom(1024)
+        if not data:
+            break
+        print(data)
+
+    s.close()  # we close the socket
+
+    input('press any key to quit...')
+    exit()
