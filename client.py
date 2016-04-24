@@ -25,7 +25,9 @@ class DHCPDiscover:
             self.transactionID += struct.pack('!B', t)
 
     def buildPacket(self):
+        print(self.transactionID)
         macb = getMacInBytes()
+        print(macb)
         packet = b''
         packet += b'\x01'  # Message type: Boot Request (1)
         packet += b'\x01'  # Hardware type: Ethernet
@@ -52,6 +54,7 @@ class DHCPDiscover:
         return packet
 
 
+# dhcp offer 解包
 class DHCPOffer:
     def __init__(self, data, transID):
         self.data = data
@@ -99,7 +102,7 @@ class DHCPRequest:
     def requestPackage(self):
         macb = getMacInBytes()
         packet = b''
-        packet += b'\x01'  # Message type: Boot Request (1)
+        packet += b'\x03'  # Message type: Boot Request (1)
         packet += b'\x01'  # Hardware type: Ethernet
         packet += b'\x06'  # Hardware address length: 6
         packet += b'\x00'  # Hops: 0
@@ -119,7 +122,7 @@ class DHCPRequest:
         packet += b'\x35\x01\x03'  # Option: (t=53,l=1) DHCP Message Type = DHCP Discover
         # packet += b'\x3d\x06\x00\x26\x9e\x04\x1e\x9b'   #Option: (t=61,l=6) Client identifier
         packet += b'\x3d\x07\x01' + macb
-        packet += b'\x32\x04' + self.reqAddr # request ip addr
+        packet += b'\x32\x04' + self.reqAddr  # request ip addr
         packet += b'\x0c\x02\x74\x74'
         # packet += b'\x37\x03\x03\x01\x06'  # Option: (t=55,l=3) Parameter Request List
         packet += b'\xff'  # End Option
@@ -127,36 +130,43 @@ class DHCPRequest:
 
 
 if __name__ == '__main__':
+
+    serverPort = 6700
+    clientPort = 6800
+
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     # 广播
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     try:
-        s.bind(('', 68))
+        s.bind(('', clientPort))
     except Exception as e:
-        print("port 68 is in use")
+        print("port 6800 is in use")
         s.close()
         exit()
 
     discoverPacket = DHCPDiscover()
-    s.sendto(discoverPacket.buildPacket(), ('<broadcast>', 67))
+    s.sendto(discoverPacket.buildPacket(), ('<broadcast>', serverPort))  # 发送discovery包
 
     # receiving DHCPOffer packet
     s.settimeout(2)
     try:
         while True:
             data = s.recv(1024)
-            m = map(lambda x: str(x), data[16:20])
-            print(str(data[16:18]))
+            print("=========offer============")
+            print(data)  # 接收到offer包
+            print("=========offer end============")
             offer = DHCPOffer(data, discoverPacket.transactionID)
             if offer.offerIP:
-                print(offer.offerIP)
+                print("ip:" + offer.offerIP)
                 dhcprequest = DHCPRequest(discoverPacket.transactionID, data[16:20])
-                s.sendto(dhcprequest.requestPackage(), ('<broadcast>', 67))
+                s.sendto(dhcprequest.requestPackage(), ('<broadcast>', serverPort))  # 发送request包
 
                 while True:
-                    dd = s.recv(1024)
-                    # print(dd)
+                    dd = s.recv(1024)  # 接收到ack包
+                    print("=============ack===============")
+                    print(dd)
+                    print("=============ack end===============")
                 break
     except socket.timeout as e:
         print(e)
