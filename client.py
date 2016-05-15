@@ -25,7 +25,6 @@ class DHCPDiscover:
             self.transactionID += struct.pack('!B', t)
 
     def buildPacket(self):
-        print(self.transactionID)
         macb = getMacInBytes()
         print(macb)
         packet = b''
@@ -131,17 +130,18 @@ class DHCPRequest:
 
 if __name__ == '__main__':
 
-    serverPort = 6700
-    clientPort = 6800
+    serverPort = 57
+    clientPort = 68
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     # 广播
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         s.bind(('', clientPort))
     except Exception as e:
-        print("port 6800 is in use")
+        print("port " + clientPort + " is in use")
         s.close()
         exit()
 
